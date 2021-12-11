@@ -1,0 +1,17 @@
+.vscode
+.idea
+
+uploads/*
+!uploads/.gitkeep
+
+elastic/data/*
+!elastic/data/.gitkeep
+
+redis/data/*
+!redis/data/.gitkeep
+
+mysql/data/*
+!mysql/data/.gitkeep
+
+logs/*
+!logs/.gitkeep

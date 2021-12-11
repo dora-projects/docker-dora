@@ -1,0 +1,96 @@
+version: "3.7"
+
+services:
+  mysql:
+    image: mysql:5.7.22
+    container_name: mysql
+    command: >
+      --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      --explicit_defaults_for_timestamp=true  --lower_case_table_names=1
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: dora
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:6
+    container_name: redis
+    command: >
+      --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx1g -Xms1g"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+      discovery.type: single-node
+      xpack.license.self_generated.type: "basic"
+      xpack.security.enabled: "true"
+      xpack.monitoring.collection.enabled: "false"
+    volumes:
+      - ./elastic/data:/usr/share/elasticsearch/data
+
+  process:
+    image: nancode/dora
+    container_name: process
+    restart: always
+    env_file: .env
+    entrypoint: [ "node", "./process/main.js" ]
+    volumes:
+      - ./logs:/server/logs
+    depends_on:
+      - redis
+      - elasticsearch
+      - mysql
+
+  manager:
+    image: nancode/dora
+    container_name: manager
+    restart: always
+    ports:
+      - "9000:9000"
+    env_file: .env
+    entrypoint: [ "node", "./manager/main.js" ]
+    volumes:
+      - ./uploads:/server/uploads
+      - ./logs:/server/logs
+    depends_on:
+      - redis
+      - elasticsearch
+      - mysql
+
+  relay:
+    image: nancode/dora
+    container_name: relay
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file: .env
+    entrypoint: [ "node", "./relay/main.js" ]
+    volumes:
+      - ./logs:/server/logs
+    depends_on:
+      - redis
+
+  webapp:
+    image: nancode/dora-app
+    container_name: webapp
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - manager
