@@ -12,17 +12,6 @@ defaults:
   run:
     shell: bash
 jobs:
-  unit-test:
-    runs-on: ubuntu-20.04
-    name: "unit tests"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Unit Tests
-        working-directory: install
-        run: find ./ -type f -name "*-test.sh" -exec "./{}" \;
-
   integration-test:
     runs-on: ubuntu-20.04
     name: "integration test"
@@ -50,6 +39,7 @@ jobs:
       - name: Integration Test
         run: |
           echo "Testing initial install"
+          chmod -R 777 ./elastic/data
           docker-compose up -d
       - name: Inspect failure
         if: failure()
