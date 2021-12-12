@@ -1,7 +1,16 @@
-version: "3.7"
+x-restart-policy: &restart_policy
+  restart: unless-stopped
+x-depends_on-healthy: &depends_on-healthy
+  condition: service_healthy
+x-healthcheck-defaults: &healthcheck_defaults
+  interval: 30s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
 
 services:
   mysql:
+    <<: *restart_policy
     image: mysql:5.7.22
     container_name: mysql
     command: >
@@ -13,21 +22,29 @@ services:
       TZ: Asia/Shanghai
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: dora
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", '-u', 'root', '-p$MYSQL_ROOT_PASSWORD' ]
     volumes:
       - ./mysql/data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d
 
   redis:
+    <<: *restart_policy
     image: redis:6
     container_name: redis
     command: >
       --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [ "CMD", "redis-cli" ,"-a", "$REDIS_PASSWORD", "ping" ]
     ports:
       - "6379:6379"
     volumes:
       - ./redis/data:/data
 
   elasticsearch:
+    <<: *restart_policy
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
     container_name: elasticsearch
     ports:
@@ -40,26 +57,43 @@ services:
       xpack.license.self_generated.type: "basic"
       xpack.security.enabled: "true"
       xpack.monitoring.collection.enabled: "false"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: curl -u elastic:${ELASTIC_PASSWORD} -s -f elasticsearch:9200/_cat/health >/dev/null || exit 1
     volumes:
       - ./elastic/data:/usr/share/elasticsearch/data
 
   process:
-    image: nancode/dora
+    image: '$SERVER_IMAGE'
     container_name: process
-    restart: always
     env_file: .env
     entrypoint: [ "node", "./process/main.js" ]
     volumes:
       - ./logs:/server/logs
     depends_on:
-      - redis
-      - elasticsearch
-      - mysql
+      redis:
+        <<: *depends_on-healthy
+      elasticsearch:
+        <<: *depends_on-healthy
+      mysql:
+        <<: *depends_on-healthy
+
+  relay:
+    image: '$SERVER_IMAGE'
+    container_name: relay
+    ports:
+      - "8000:8000"
+    env_file: .env
+    entrypoint: [ "node", "./relay/main.js" ]
+    volumes:
+      - ./logs:/server/logs
+    depends_on:
+      redis:
+        <<: *depends_on-healthy
 
   manager:
-    image: nancode/dora
+    image: '$SERVER_IMAGE'
     container_name: manager
-    restart: always
     ports:
       - "9000:9000"
     env_file: .env
@@ -68,25 +102,15 @@ services:
       - ./uploads:/server/uploads
       - ./logs:/server/logs
     depends_on:
-      - redis
-      - elasticsearch
-      - mysql
-
-  relay:
-    image: nancode/dora
-    container_name: relay
-    restart: always
-    ports:
-      - "8000:8000"
-    env_file: .env
-    entrypoint: [ "node", "./relay/main.js" ]
-    volumes:
-      - ./logs:/server/logs
-    depends_on:
-      - redis
+      redis:
+        <<: *depends_on-healthy
+      elasticsearch:
+        <<: *depends_on-healthy
+      mysql:
+        <<: *depends_on-healthy
 
   webapp:
-    image: nancode/dora-app
+    image: '$WEB_IMAGE'
     container_name: webapp
     ports:
       - "8080:80"
