@@ -3,7 +3,7 @@ x-restart-policy: &restart_policy
 x-depends_on-healthy: &depends_on-healthy
   condition: service_healthy
 x-healthcheck-defaults: &healthcheck_defaults
-  interval: 30s
+  interval: 10s
   timeout: 5s
   retries: 5
   start_period: 10s
@@ -67,7 +67,7 @@ services:
     image: '$SERVER_IMAGE'
     container_name: process
     env_file: .env
-    entrypoint: [ "node", "./process/main.js" ]
+    command: [ "node", "./process/main.js" ]
     volumes:
       - ./logs:/server/logs
     depends_on:
@@ -84,7 +84,7 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
-    entrypoint: [ "node", "./relay/main.js" ]
+    command: [ "node", "./relay/main.js" ]
     volumes:
       - ./logs:/server/logs
     depends_on:
@@ -97,7 +97,7 @@ services:
     ports:
       - "9000:9000"
     env_file: .env
-    entrypoint: [ "node", "./manager/main.js" ]
+    command: [ "node", "./manager/main.js" ]
     volumes:
       - ./uploads:/server/uploads
       - ./logs:/server/logs
