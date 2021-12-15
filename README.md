@@ -12,7 +12,8 @@ git clone https://github.com/dora-projects/docker-dora.git
 ```bash
 cd docker-dora
 
-# 修改 .env 文件中的配置信息（密码等）
+# 按需修改 .env 文件中的配置信息（密码等）
+# 查看文档 https://nancode.gitee.io/dora/docs/config
 vi .env
 ```
 
@@ -27,4 +28,4 @@ docker-compose down
 ```
 
 4. 访问
-浏览 http://localhost:8080 即可看到控制台。
+浏览器打开 http://localhost:8080
