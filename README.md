@@ -9,10 +9,10 @@ git clone https://github.com/dora-projects/docker-dora.git
 
 ## 2. 修改配置
 
-```
+```bash
 cd docker-dora
 
-# 修改 .env 文件中的配置信息
+# 修改 .env 文件中的配置信息（密码等）
 vi .env
 ```
 
